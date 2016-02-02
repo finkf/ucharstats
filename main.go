@@ -71,7 +71,7 @@ func main() {
 ////////////////////////////////////////////////////////////////////////////////
 func printChars(chars map[rune]int) {
 	keys := sortRuneKeys(chars)
-	var p [4]byte
+	var p [utf8.UTFMax]byte
 	for _, key := range keys {
 		char := key
 		if !unicode.IsPrint(key) || unicode.IsMark(key) {

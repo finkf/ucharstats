@@ -60,7 +60,7 @@ func printChars(chars map[rune]int) {
 	var p [4]byte
 	for _, key := range keys {
 		char := key
-		if unicode.IsSpace(key) {
+		if !unicode.IsPrint(key) || unicode.IsMark(key) {
 			char = ' '
 		}
 		var cat string

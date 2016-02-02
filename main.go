@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"flag"
+	"fmt"
 	"os"
 	"sort"
 	"unicode"
+	"unicode/utf8"
 )
 
 var longnames = map[string]string{
@@ -22,6 +23,7 @@ var longnames = map[string]string{
 	"P":  "Punctuation",
 	"Pc": "Punctuation, connector",
 	"Pd": "Punctuation, dash",
+	"Pe": "Punctuation, close",
 	"Pi": "Punctuation, initial quote",
 	"Pf": "Punctuation, final quote",
 	"Po": "Punctuation, other",
@@ -32,59 +34,109 @@ var longnames = map[string]string{
 	"Zs": "Separator, space",
 }
 
+////////////////////////////////////////////////////////////////////////////////
 func main() {
-	long   := flag.Bool("long", false, "print long unicode classes")
-	script := flag.Bool("script", false, "print long contained script names")
+	scripts := flag.Bool("scripts", false, "print contained script names")
+	cats := flag.Bool("cats", false, "print unicode categories")
 	flag.Parse()
-	
+
 	reader := bufio.NewReader(os.Stdin)
-	cats := make(map[string]int)
-	scripts := make(map[string]int)
-
+	chars := make(map[rune]int)
 	for r, _, err := reader.ReadRune(); err == nil; r, _, err = reader.ReadRune() {
-		countCategory(cats, r)
-		if *script {
-			countScript(scripts, r)
-		}
+		chars[r]++
 	}
-	keys := sortKeys(cats)
-	for _, k := range keys {
-		if *long {
-			fmt.Printf("%-2s %5d %s\n", k, cats[k], longnames[k])
-		} else {
-			fmt.Printf("%-2s %5d\n", k, cats[k])
-		}
+	printChars(chars)
+	if *cats {
+		printCategories(chars)
 	}
-	if *script {
-		keys = sortKeys(scripts)
-		for _, k := range keys {
-			fmt.Printf("%-21s %d\n", k, scripts[k])
-		}
+	if *scripts {
+		printScripts(chars)
 	}
 }
 
-
-func countCategory(counts map[string]int, r rune) {
-	for name, rng := range unicode.Categories {
-		if unicode.In(r, rng) {
-			counts[name]++
+////////////////////////////////////////////////////////////////////////////////
+func printChars(chars map[rune]int) {
+	keys := sortRuneKeys(chars)
+	var p [4]byte
+	for _, key := range keys {
+		char := key
+		if unicode.IsSpace(key) {
+			char = ' '
 		}
+		var cat string
+		for name, rng := range unicode.Categories {
+			if unicode.In(key, rng) && len(name) > 1 {
+				cat = name
+			}
+		}
+		utf8.EncodeRune(p[:], key)
+		fmt.Printf("%c (%-2s %U 0x%x) %d\n", char, cat, key, p, chars[key])
 	}
 }
 
-func countScript(scripts map[string]int, r rune) {
-	for name, rng := range unicode.Scripts {
-		if unicode.In(r, rng) {
-			scripts[name]++
+////////////////////////////////////////////////////////////////////////////////
+func printCategories(chars map[rune]int) {
+	categories := make(map[string]int)
+	for char, count := range chars {
+		for name, rng := range unicode.Categories {
+			if unicode.In(char, rng) {
+				categories[name] += count
+			}
 		}
+	}
+	keys := sortStrKeys(categories)
+	fmt.Println("// Categories")
+	for _, key := range keys {
+		fmt.Printf("%-2s %-21s %d\n", key, longnames[key], categories[key])
 	}
 }
 
-func sortKeys(m map[string]int) []string {
+////////////////////////////////////////////////////////////////////////////////
+func printScripts(chars map[rune]int) {
+	scripts := make(map[string]int)
+	for char, count := range chars {
+		for name, rng := range unicode.Scripts {
+			if unicode.In(char, rng) {
+				scripts[name] += count
+			}
+		}
+	}
+	keys := sortStrKeys(scripts)
+	fmt.Println("// Scripts")
+	for _, key := range keys {
+		fmt.Printf("%-24s %d\n", key, scripts[key])
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+func sortStrKeys(m map[string]int) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+////////////////////////////////////////////////////////////////////////////////
+func sortRuneKeys(m map[rune]int) []rune {
+	keys := make([]rune, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Sort(RuneSlice(keys))
+	return keys
+}
+
+////////////////////////////////////////////////////////////////////////////////
+type RuneSlice []rune
+
+func (p RuneSlice) Len() int {
+	return len(p)
+}
+func (p RuneSlice) Less(i, j int) bool {
+	return p[i] < p[j]
+}
+func (p RuneSlice) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
 }

@@ -38,6 +38,7 @@ var longnames = map[string]string{
 func main() {
 	scripts := flag.Bool("scripts", false, "print contained script names")
 	cats := flag.Bool("cats", false, "print unicode categories")
+	nochars := flag.Bool("no-chars", false, "do not print character information")
 	flag.Parse()
 
 	var reader *bufio.Reader
@@ -56,7 +57,9 @@ func main() {
 	for r, _, err := reader.ReadRune(); err == nil; r, _, err = reader.ReadRune() {
 		chars[r]++
 	}
-	printChars(chars)
+	if !*nochars {
+		printChars(chars)
+	}
 	if *cats {
 		printCategories(chars)
 	}

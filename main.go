@@ -40,7 +40,18 @@ func main() {
 	cats := flag.Bool("cats", false, "print unicode categories")
 	flag.Parse()
 
-	reader := bufio.NewReader(os.Stdin)
+	var reader *bufio.Reader
+	args := flag.Args()
+	if len(args) > 0 {
+		is, err := os.Open(args[0])
+		if err != nil {
+			panic(err)
+		}
+		defer is.Close()
+		reader = bufio.NewReader(is)
+	} else {
+		reader = bufio.NewReader(os.Stdin)
+	}
 	chars := make(map[rune]int)
 	for r, _, err := reader.ReadRune(); err == nil; r, _, err = reader.ReadRune() {
 		chars[r]++

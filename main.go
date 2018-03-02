@@ -48,7 +48,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		defer is.Close()
+		defer func() { _ = is.Close() }()
 		reader = bufio.NewReader(is)
 	} else {
 		reader = bufio.NewReader(os.Stdin)
@@ -128,7 +128,9 @@ func sortStrKeys(m map[string]int) []string {
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
 	return keys
 }
 
@@ -138,19 +140,8 @@ func sortRuneKeys(m map[rune]int) []rune {
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Sort(RuneSlice(keys))
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
 	return keys
-}
-
-////////////////////////////////////////////////////////////////////////////////
-type RuneSlice []rune
-
-func (p RuneSlice) Len() int {
-	return len(p)
-}
-func (p RuneSlice) Less(i, j int) bool {
-	return p[i] < p[j]
-}
-func (p RuneSlice) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
 }

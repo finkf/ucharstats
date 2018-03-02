@@ -39,6 +39,7 @@ func main() {
 	scripts := flag.Bool("scripts", false, "print contained script names")
 	cats := flag.Bool("cats", false, "print unicode categories")
 	nochars := flag.Bool("no-chars", false, "do not print character information")
+	u8 := flag.Bool("utf8", false, "print utf8 codes")
 	flag.Parse()
 
 	var reader *bufio.Reader
@@ -58,7 +59,7 @@ func main() {
 		chars[r]++
 	}
 	if !*nochars {
-		printChars(chars)
+		printChars(chars, *u8)
 	}
 	if *cats {
 		printCategories(chars)
@@ -69,7 +70,8 @@ func main() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-func printChars(chars map[rune]int) {
+func printChars(chars map[rune]int, u8 bool) {
+	var buf [utf8.UTFMax]byte
 	keys := sortRuneKeys(chars)
 	var p [utf8.UTFMax]byte
 	for _, key := range keys {
@@ -84,7 +86,16 @@ func printChars(chars map[rune]int) {
 			}
 		}
 		utf8.EncodeRune(p[:], key)
-		fmt.Printf("%c (%-2s %U 0x%x) %d\n", char, cat, key, p, chars[key])
+		if u8 {
+			fmt.Printf("%c (%-2s %U 0x%x", char, cat, key, p)
+			n := utf8.EncodeRune(buf[:], key)
+			for i := 0; i < n; i++ {
+				fmt.Printf(" 0x%x", buf[i])
+			}
+			fmt.Printf(") %d\n", chars[key])
+		} else {
+			fmt.Printf("%c (%-2s %U 0x%x) %d\n", char, cat, key, p, chars[key])
+		}
 	}
 }
 
